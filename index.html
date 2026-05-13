@@ -6,12 +6,12 @@
     <title>廣東話口語1分鐘隨機挑戰</title>
     <style>
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
         }
         .container {
@@ -22,6 +22,7 @@
             text-align: center;
             width: 90%;
             max-width: 450px;
+            box-sizing: border-box;
         }
         h1 { color: #333; font-size: 24px; margin-bottom: 25px; }
         
@@ -70,7 +71,7 @@
         .btn-primary { background-color: #007bff; color: white; }
         .btn-success { background-color: #28a745; color: white; }
         .btn-danger { background-color: #dc3545; color: white; }
-        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.6; }
 
         /* AI 提示詞區域 */
         .ai-section {
@@ -153,7 +154,7 @@
         "你最喜歡哪個季節？請描述那個季節的迷人之處。",
         "你認為線上學習能完全取代傳統學校教育嗎？",
         "如果你要開一家店，你想開什麼店？為什麼？",
-        "談談你最崇拜的一個人是誰，他對你有什麼啟發？",
+        "談談你對最崇拜的一個人是誰，他對你有什麼啟發？",
         "你覺得保持身體健康最有效的方法是什麼？",
         "如果世界末日即將來臨，你最後一天會想做什麼？",
         "分享一次你經歷過最尷尬或最好笑的誤會。",
@@ -222,7 +223,7 @@
         "你認為每個人都應該定期看心理諮詢（心理醫生）嗎？",
         "如果你有一整年不用工作的「無薪假」，你會怎麼安排？",
         "你覺得幽默感在人際交往中扮演著多重要的角色？",
-        "談談你對「二手物品交易」（如買二手衫/二手二手車）的接受度。",
+        "談談你對「二手物品交易」（如買二手衫/二手商品）的接受度。",
         "你最期待未來的科技能實現哪一個天馬行空的功能？",
         "分享一個你覺得最舒適、最能充電的休閒活動。",
         "如果你能為這個世界消除一種疾病或問題，你會選擇什麼？"
@@ -238,6 +239,7 @@
     let mediaRecorder;
     let audioChunks = [];
 
+    // 隨機話題滾動
     function startTopicRoulette() {
         if(isChallenging) return;
         document.getElementById("draw-btn").disabled = true;
@@ -251,7 +253,7 @@
             const randomIndex = Math.floor(Math.random() * topics.length);
             const topicText = document.getElementById("topic-text");
             topicText.innerText = topics[randomIndex];
-            topicText.style.transform = counter % 2 === 0 ? "translateY(-5px)" : "translateY(5px)";
+            topicText.style.transform = counter % 2 === 0 ? "translateY(-3px)" : "translateY(3px)";
             counter++;
             
             if (counter > 15) { 
@@ -263,19 +265,23 @@
                 document.getElementById("timer-display").innerText = "01:00";
                 document.getElementById("timer-display").style.color = "#333";
             }
-        }, 100);
+        }, 80);
     }
 
+    // 開始挑戰
     async function startChallenge() {
         audioChunks = [];
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-            mediaRecorder.onstop = exportAudio;
-            mediaRecorder.start();
-        } catch (err) {
-            alert("無法開啟麥克風，但你仍可繼續挑戰倒計時。請檢查瀏覽器錄音權限。");
+        // 嘗試啟動錄音
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                mediaRecorder.onstop = exportAudio;
+                mediaRecorder.start();
+            } catch (err) {
+                console.log("麥克風無法開啟或被拒絕，僅啟用計時器功能。");
+            }
         }
 
         isChallenging = true;
@@ -304,6 +310,7 @@
         }, 1000);
     }
 
+    // 結束挑戰
     function stopChallenge() {
         clearInterval(timerInterval);
         isChallenging = false;
@@ -311,6 +318,9 @@
         if (mediaRecorder && mediaRecorder.state !== "inactive") {
             mediaRecorder.stop();
             mediaRecorder.stream.getTracks().forEach(track => track.stop()); 
+        } else {
+            // 如果是在不支援錄音的本地環境測試，直接顯示提示詞
+            document.getElementById("ai-section").style.display = "block";
         }
 
         document.getElementById("draw-btn").disabled = false;
@@ -320,14 +330,17 @@
         generatePrompt();
     }
 
+    // 處理錄音輸出
     function exportAudio() {
+        if(audioChunks.length === 0) return;
         const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
         const audioUrl = URL.createObjectURL(audioBlob);
         const container = document.getElementById("audio-container");
         container.innerHTML = `<audio src="${audioUrl}" controls style="width:100%;"></audio>`;
         document.getElementById("ai-section").style.display = "block";
-    </div>
+    }
 
+    // 生成提示詞
     function generatePrompt() {
         let finalMins = Math.floor(timeElapsed / 60);
         let finalSecs = timeElapsed % 60;
@@ -337,11 +350,18 @@
         document.getElementById("prompt-text").value = prompt;
     }
 
+    // 複製提示詞
     function copyPrompt() {
         const textarea = document.getElementById("prompt-text");
         textarea.select();
-        document.execCommand("copy");
-        alert("提示詞已複製！請將錄音檔和提示詞一起發給 ChatGPT / Claude 進行分析。");
+        textarea.setSelectionRange(0, 99999); // 針對手機優化
+        try {
+            navigator.clipboard.writeText(textarea.value);
+            alert("提示詞已複製！請將錄音檔和提示詞一起發給 ChatGPT / Claude 進行分析。");
+        } catch (err) {
+            document.execCommand("copy");
+            alert("提示詞已複製！");
+        }
     }
 </script>
 
