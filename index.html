@@ -71,6 +71,22 @@
         .btn-primary { background-color: #007bff; color: white; }
         .btn-success { background-color: #28a745; color: white; }
         .btn-danger { background-color: #dc3545; color: white; }
+        
+        /* 專門為 iPhone 設計的實體下載按鈕樣式 */
+        .btn-download { 
+            background-color: #20c997; 
+            color: white; 
+            width: 100%; 
+            margin: 15px 0; 
+            display: none; /* 預設隱藏，錄音完才顯示 */
+            text-decoration: none; 
+            text-align: center; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            padding: 12px 0; 
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(32, 201, 151, 0.2);
+        }
         button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.6; }
 
         /* AI 提示詞區域 */
@@ -118,7 +134,11 @@
     <div class="ai-section" id="ai-section">
         <h3>🤖 第一步：下載你的錄音檔</h3>
         <div id="audio-container" style="margin-bottom: 15px;"></div>
-        <h3>🤖 第二步：複製下方提示詞，連同錄音發給 AI</h3>
+        
+        <!-- 手機端專用實體下載按鈕 -->
+        <a id="download-link" class="btn-download" href="#" download="cantonese_record.mp3">💾 下載錄音檔 (.mp3)</a>
+        
+        <h3 style="margin-top: 20px;">🤖 第二步：複製下方提示詞，連同錄音發給 AI</h3>
         <textarea id="prompt-text" readonly></textarea>
         <button class="btn-primary" style="width:100%; margin: 10px 0 0 0;" onclick="copyPrompt()">📋 複製 AI 提示詞</button>
     </div>
@@ -226,7 +246,7 @@
         "談談你對「二手物品交易」（如買二手衫/二手商品）的接受度。",
         "你最期待未來的科技能實現哪一個天馬行空的功能？",
         "分享一個你覺得最舒適、最能充電的休閒活動。",
-        "如果你能為這個世界消除一種疾病或問題，你會選擇什麼？"
+        "如果你能為這個世界消除一種疾病或問題，你会選擇什麼？"
     ];
 
     let rouletteInterval;
@@ -239,12 +259,12 @@
     let mediaRecorder;
     let audioChunks = [];
 
-    // 隨機話題滾動
     function startTopicRoulette() {
         if(isChallenging) return;
         document.getElementById("draw-btn").disabled = true;
         document.getElementById("start-btn").disabled = true;
         document.getElementById("ai-section").style.display = "none";
+        document.getElementById("download-link").style.display = "none";
         
         let counter = 0;
         clearInterval(rouletteInterval);
@@ -268,19 +288,27 @@
         }, 80);
     }
 
-    // 開始挑戰
     async function startChallenge() {
         audioChunks = [];
-        // 嘗試啟動錄音
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             try {
+                // 明確要求音訊格式以適應 iOS 檔案系統
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                
+                // 優先使用 iOS 普遍支援的 mp4/aac 格式進行包裝，確保系統能正常儲存與解碼
+                let options = { mimeType: 'audio/mp4' };
+                if (!MediaRecorder.isTypeSupported('audio/mp4')) {
+                    options = { mimeType: 'audio/webm' };
+                }
+                
+                mediaRecorder = new MediaRecorder(stream, options);
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) audioChunks.push(event.data);
+                };
                 mediaRecorder.onstop = exportAudio;
                 mediaRecorder.start();
             } catch (err) {
-                console.log("麥克風無法開啟或被拒絕，僅啟用計時器功能。");
+                console.log("麥克風無法開啟，僅啟用計時器。原因: ", err);
             }
         }
 
@@ -310,7 +338,6 @@
         }, 1000);
     }
 
-    // 結束挑戰
     function stopChallenge() {
         clearInterval(timerInterval);
         isChallenging = false;
@@ -319,8 +346,9 @@
             mediaRecorder.stop();
             mediaRecorder.stream.getTracks().forEach(track => track.stop()); 
         } else {
-            // 如果是在不支援錄音的本地環境測試，直接顯示提示詞
+            // 本地電腦測試不支援麥克風時的降級處理
             document.getElementById("ai-section").style.display = "block";
+            document.getElementById("download-link").style.display = "none"; 
         }
 
         document.getElementById("draw-btn").disabled = false;
@@ -330,17 +358,30 @@
         generatePrompt();
     }
 
-    // 處理錄音輸出
     function exportAudio() {
         if(audioChunks.length === 0) return;
-        const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+        
+        // 判斷當前封裝的格式，動態命名副檔名
+        const isMp4 = mediaRecorder.mimeType.includes('mp4');
+        const fileExt = isMp4 ? 'mp4' : 'wav';
+        const mimeType = isMp4 ? 'audio/mp4' : 'audio/wav';
+
+        const audioBlob = new Blob(audioChunks, { type: mimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
+        
+        // 更新網頁上的預覽播放器
         const container = document.getElementById("audio-container");
         container.innerHTML = `<audio src="${audioUrl}" controls style="width:100%;"></audio>`;
+        
+        // 將音訊網址與屬性綁定到我們手動建立的實體下載按鈕上
+        const downloadLink = document.getElementById("download-link");
+        downloadLink.href = audioUrl;
+        downloadLink.download = `cantonese_record.${fileExt}`;
+        downloadLink.style.display = "block"; // 顯示按鈕
+        
         document.getElementById("ai-section").style.display = "block";
     }
 
-    // 生成提示詞
     function generatePrompt() {
         let finalMins = Math.floor(timeElapsed / 60);
         let finalSecs = timeElapsed % 60;
@@ -350,14 +391,13 @@
         document.getElementById("prompt-text").value = prompt;
     }
 
-    // 複製提示詞
     function copyPrompt() {
         const textarea = document.getElementById("prompt-text");
         textarea.select();
-        textarea.setSelectionRange(0, 99999); // 針對手機優化
+        textarea.setSelectionRange(0, 99999); 
         try {
             navigator.clipboard.writeText(textarea.value);
-            alert("提示詞已複製！請將錄音檔和提示詞一起發給 ChatGPT / Claude 進行分析。");
+            alert("提示詞已複製！請將錄音檔和提示詞一起發給 AI 進行分析。");
         } catch (err) {
             document.execCommand("copy");
             alert("提示詞已複製！");
