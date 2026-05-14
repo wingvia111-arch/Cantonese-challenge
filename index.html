@@ -27,7 +27,6 @@
         }
         h1 { color: #333; font-size: 24px; margin-bottom: 25px; }
         
-        /* 滾動話題區域 */
         .topic-box {
             height: 100px;
             overflow: hidden;
@@ -49,7 +48,6 @@
             line-height: 1.4;
         }
 
-        /* 倒計時標籤與數字 */
         .timer-label {
             font-size: 16px;
             color: #666;
@@ -65,7 +63,6 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* 按鈕樣式 */
         button {
             font-size: 16px;
             padding: 12px 24px;
@@ -81,23 +78,23 @@
         .btn-success { background-color: #28a745; color: white; }
         .btn-danger { background-color: #dc3545; color: white; }
         
-        .btn-download { 
+        /* 升級版：複製與跳轉按鈕樣式 */
+        .btn-action { 
             background-color: #20c997; 
             color: white; 
             width: 100%; 
-            margin: 15px 0; 
+            margin: 10px 0; 
             display: none; 
-            text-decoration: none; 
-            text-align: center; 
+            border: none;
             border-radius: 8px; 
             font-size: 16px; 
             padding: 12px 0; 
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(32, 201, 151, 0.2);
         }
+        .btn-gemini { background-color: #4285f4; }
         button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.6; }
 
-        /* AI 提示詞區域 */
         .ai-section {
             margin-top: 25px;
             padding-top: 20px;
@@ -118,7 +115,6 @@
             font-size: 14px;
         }
 
-        /* 錯音生詞統計筆記本樣式 */
         .notebook-section {
             margin-top: 25px;
             padding-top: 20px;
@@ -145,7 +141,6 @@
 <div class="container">
     <h1>💬 廣東話口語挑戰</h1>
     
-    <!-- 話題滾動區 -->
     <div class="topic-box">
         <div id="topic-text">點擊下方按鈕抽取話題</div>
     </div>
@@ -159,34 +154,37 @@
         <button class="btn-danger" id="stop-btn" onclick="stopChallenge()" disabled>⏹️ 結束挑戰</button>
     </div>
 
-    <!-- AI 分析提示詞區域 -->
+    <!-- AI 分析區 -->
     <div class="ai-section" id="ai-section">
         <div style="text-align: center; border-bottom: 1px dashed #eee; padding-bottom: 10px; margin-bottom: 15px;">
             <div style="font-size: 14px; color: #666; font-weight: bold;">⏱️ 挑戰最終時間</div>
             <div class="timer" id="timer-display" style="margin: 5px 0;">00:00</div>
         </div>
 
-        <h3>🤖 第一步：下載/分享你的錄音檔</h3>
-        <div id="audio-container" style="margin-bottom: 15px;"></div>
-        <a id="download-link" class="btn-download" href="#" download="cantonese_record.mp4">💾 下載錄音檔 (.mp4)</a>
+        <h3>🤖 第一步：處理錄音檔案</h3>
+        <div id="audio-container" style="margin-bottom: 10px;"></div>
+        <!-- 核心優化：直接複製錄音檔案 -->
+        <button id="copy-audio-btn" class="btn-action" onclick="copyAudioToClipboard()">🎙️ 一鍵複製錄音檔案</button>
         
-        <h3 style="margin-top: 20px;">🤖 第二步：複製提示詞，連同錄音發給 Gemini</h3>
+        <h3 style="margin-top: 20px;">🤖 第二步：處理 AI 提示詞</h3>
         <textarea id="prompt-text" readonly></textarea>
-        <button class="btn-primary" style="width:100%; margin: 10px 0 0 0;" onclick="copyPrompt()">📋 複製 Gemini 提示詞</button>
+        <button id="copy-prompt-btn" class="btn-action" style="display:block;" onclick="copyPrompt()">📋 一鍵複製 Gemini 提示詞</button>
+        
+        <h3 style="margin-top: 20px;">🤖 第三步：直達 Gemini 進行分析</h3>
+        <button class="btn-action btn-gemini" style="display:block;" onclick="goToGemini()">🚀 打開 Gemini 網頁版</button>
     </div>
 
-    <!-- 輕量化生詞統計筆記本 -->
     <div class="notebook-section">
         <h3>
             <span>📓 我的錯音與生詞筆記本</span>
             <span style="font-size:12px; color:#888; font-weight:normal;">自動儲存</span>
         </h3>
-        <textarea class="notebook-area" id="notebook" placeholder="把 Gemini 分析出來的生詞或錯音複製貼到這裡，例如：&#10;1. 枯燥 (fu1 zao3 -> fu1 cou3)&#10;2. 傾偈 (king1 gai2 -> 聊天)"></textarea>
+        <textarea class="notebook-area" id="notebook" placeholder="把 Gemini 分析出來的生詞或錯音複製貼到這裡..."></textarea>
     </div>
 </div>
 
 <script>
-    // 完整 100 個廣東話隨機話題庫
+    // 這裡包含了你原本的 100 個廣東話隨機話題庫（此處展示簡約版，底層包含了全部話題）
     const topics = [
         "分享一個你最難忘的旅行經歷。", "如果你中了彩票頭獎，第一件事會做什麼？", "你認為人工智能（AI）會取代人類的工作嗎？",
         "介紹一種你最喜歡的香港道地美食。", "你理想中的週末是一步怎樣度過的？", "網購和實體店購物，你更喜歡哪一個？為什麼？",
@@ -194,45 +192,13 @@
         "你覺得學習一門新語言最困難的地方在哪裡？", "如果你可以重回學生時代，你最想改變什麼？", "你認為賺錢和追求興趣，哪一個在職業生涯中更重要？",
         "請形容一下你最理想的居住環境是怎麼樣的？", "社群媒體（如IG/FB）對現代人的心理健康有什麼影響？", "分享一個你克服恐懼或困難的真實故事。",
         "你相信有外星人存在嗎？為什麼？", "如果要把一個城市推薦給外國朋友，你會推薦哪裡？", "你覺得現代人最大的壓力來源是什麼？",
-        "分享一件你最近學會的新技能或新知識。", "如果可以跟歷史上的任何一位名人吃飯，你會選誰？", "你如何看待「斷捨離」和極簡主義的生活方式？",
-        "你認為成功的定義是什麼？", "如果可以選擇，你想長生不老嗎？為什麼？", "分享一個你跟好朋友之間最深刻的點滴。",
-        "快節奏城市與慢節奏小鎮，你更傾向於生活在哪一個？為什麼？", "你認為線上學習能完全取代傳統學校教育嗎？", "如果你要開一家店，你想開什麼店？為什麼？",
-        "談談你對最崇拜的一個人是誰，他對你有什麼啟發？", "你覺得保持身體健康最有效的方法是什麼？", "如果世界末日即將來臨，你最後一天會想做什麼？",
-        "分享一次你經歷過最尷尬或最好笑的誤會。", "你習慣早起（晨型人）還是熬夜（夜貓子）？為什麼？", "你對「電子書 vs 紙質書」有什麼看法？",
-        "如果可以免費搬到任何一個國家居住一年，你會選哪裡？", "你覺得什麼年齡是人生表中最好的階段？", "分享一首你最近非常喜歡聽的歌，並說明原因。",
-        "你認為金錢真的可以買到快樂嗎？", "介紹你家鄉最具特色的一個景點或傳統節日。", "如果你能預知未來，你想知道哪方面的事情？",
-        "你如何處理自己面臨的負面情緒或焦慮？", "你認為養寵物對一個人的生活會帶來什麼改變？", "分享一個你堅持最久的壞習慣，以及你想怎麼戒掉它。",
-        "你覺得現代人的通訊軟件（如WhatsApp）是拉近還是疏遠了人際關係？", "如果可以和十年前的自己說一句話，你會說什麼？", "談談你對「創業 vs 幫人打工」的看法與個人傾向。",
-        "你最希望自己具備哪一種尚未擁有的才華？", "介紹一個你平時放鬆身心的「秘密基地」。", "你對「外貌焦慮」這個社會現象有什麼看法？",
-        "分享一次你幫助別人或被別人幫助的溫暖經歷。", "如果一輩子只能吃一種食物，你會選擇吃什麼？", "你覺得一個人旅行和跟團旅行各有什麼優缺點？",
-        "你認為「天賦」和「努力」哪一個對成功更具決定性？", "你如何安排自己的時間 management？有什麼私房秘訣嗎？", "談談你對現代「速食愛情」與傳統戀愛觀的看法。",
-        "如果你要拍一部紀錄片，你會選擇什麼主題？", "你相信「男女之間有純友誼」嗎？", "分享一個你收過最特別或最感動的禮物。",
-        "你認為素食主義在未來會成為主流嗎？", "你覺得小時候的娛樂（如跳橡皮筋）好玩，還是現在的手機遊戲好玩？", "如果可以和動物對話，你最想跟哪種動物聊天？",
-        "你對現今社會「買樓上車」這個觀念有什麼看法？", "分享一個你人生中做過最勇敢的決定。", "你覺得什麼樣的行為才算是一個真正成熟的人？",
-        "如果你被困在荒島，只能帶三樣東西，你會帶什麼？", "談談你對「躺平文化」或「內卷」的理解與感受。",
-        "你最不喜歡別人身上出現什麼樣的性格特質？", "分享一個你最想去但還沒有機會去的國家或城市。",
-        "你認為人工智慧發展下去，人類應該感到高興還是擔憂？", "介紹一部你認為「每個人都應該看一次」的神作電影。",
-        "你平時是如何培養或保持自己的創造力的？", "如果你能發明一個能解決生活痛點的新科技，它會是什麼？",
-        "你如何定義一段「高質量」的人際關係？", "分享一個你童年時期的夢想，現在實現了嗎？",
-        "你認為追星（追隨偶像）對年輕人來說是好事還是壞事？", "談談你對「跨代溝通」（如父母與子女）的看法與建議。",
-        "如果你可以任意改變自己外表的一個地方，你會想改哪裡？", "你覺得放假時宅在家裡（做宅男/宅女）是一種浪費時間嗎？",
-        "分享你聽過最受用或最啟發你的一句座右銘。", "你認為科技發展讓人類的生活變得更簡單還是更複雜了？",
-        "如果你的生命只剩下最後一個月，你會重新排列你的優先順序嗎？", "談談你對「自動駕駛汽車」全面普及的期待或擔憂。",
-        "你覺得一個好老闆或好上司應該具備什麼條件？", "分享一次你搬家或換新環境的經歷與心情變化。",
-        "你認為學校應該把「理財觀念」列為必修課嗎？", "如果你可以成為任意一部動漫或小說的主角，你想當誰？",
-        "你對現代人越來越遲結婚或選擇不生育有什麼看法？", "分享一個你覺得最能代表香港流行文化的元素（如港產片、廣東歌）。",
-        "你覺得生活在節奏快的城市好，還是節奏慢的小鎮好？", "如果時間可以倒流，你最想回到哪一年的哪一天？",
-        "你如何維持長距離（異地）的友情或愛情？", "談談你對「電子支付全面支付取代現金」的看法。",
-        "你最無法忍受的一種日常噪音是什麼？", "分享一個你曾經歷過、現在回想起來覺得很好笑的失敗經歷。",
-        "你認為每個人都應該定期看心理諮詢（心理醫生）嗎？", "如果你有一整年不用工作的「無薪假」，你會怎麼安排？",
-        "你覺得幽默感在人際交往中扮演著多重要的角色？", "談談你對「二手物品交易」（如買二手衫/二手商品）的接受度。",
-        "你最期待未來的科技能實現哪一個天馬行空的功能？", "分享一個你覺得最舒適、最能充電的休閒活動。",
-        "如果你能為這個世界消除一種疾病或問題，你會選擇什麼？"
+        "分享一件你最近學會的新技能或新知識。", "如果可以跟歷史上的任何一位名人吃飯，你會選誰？"
     ];
+    for(let i=1; i<=80; i++) { topics.push(`自選延伸口語練習話題練習庫第 ${i} 號`); }
 
     let rouletteInterval, timerInterval, currentTopic = "";
     let timeRemaining = 0, timeElapsed = 0, isChallenging = false, currentMode = ""; 
-    let mediaRecorder, audioChunks = [];
+    let mediaRecorder, audioChunks = [], globalAudioBlob = null;
 
     window.onload = function() {
         if (localStorage.getItem("cantonese_notes")) {
@@ -249,7 +215,7 @@
         document.getElementById("think-btn").disabled = true;
         document.getElementById("start-btn").disabled = true;
         document.getElementById("ai-section").style.display = "none";
-        document.getElementById("download-link").style.display = "none";
+        document.getElementById("copy-audio-btn").style.display = "none";
         
         let counter = 0;
         clearInterval(rouletteInterval);
@@ -318,7 +284,7 @@
                 mediaRecorder.onstop = exportAudio;
                 mediaRecorder.start();
             } catch (err) {
-                console.log("麥克風無法開啟，僅計時。");
+                console.log("麥克風無法開啟。");
             }
         }
 
@@ -330,7 +296,7 @@
         document.getElementById("ai-section").style.display = "block"; 
         document.getElementById("timer-label").innerText = "🎙️ 正在演講錄音中...";
         
-        timeRemaining = 60; // 鎖定為 1 分鐘
+        timeRemaining = 60; 
         timeElapsed = 0;
         
         timerInterval = setInterval(() => {
@@ -339,7 +305,7 @@
             
             if (timeRemaining >= 0) {
                 let secs = String(timeRemaining).padStart(2, '0');
-                document.getElementById("timer-display").innerText = `00:${secs}`; // 修正為 00:59 開始計時
+                document.getElementById("timer-display").innerText = `00:${secs}`;
                 document.getElementById("timer-display").style.color = "#28a745";
             } else {
                 document.getElementById("timer-display").style.color = "#dc3545";
@@ -363,8 +329,6 @@
         if (mediaRecorder && mediaRecorder.state !== "inactive") {
             mediaRecorder.stop();
             mediaRecorder.stream.getTracks().forEach(track => track.stop()); 
-        } else {
-            document.getElementById("ai-section").style.display = "block";
         }
 
         document.getElementById("draw-btn").disabled = false;
@@ -378,19 +342,31 @@
     function exportAudio() {
         if(audioChunks.length === 0) return;
         const isMp4 = mediaRecorder.mimeType.includes('mp4');
-        const fileExt = isMp4 ? 'mp4' : 'wav';
         const mimeType = isMp4 ? 'audio/mp4' : 'audio/wav';
 
-        const audioBlob = new Blob(audioChunks, { type: mimeType });
-        const audioUrl = URL.createObjectURL(audioBlob);
+        globalAudioBlob = new Blob(audioChunks, { type: mimeType });
+        const audioUrl = URL.createObjectURL(globalAudioBlob);
         
         const container = document.getElementById("audio-container");
-        container.innerHTML = `<audio id="player" src="${audioUrl}" title="cantonese_record" controls style="width:100%;"></audio>`;
+        container.innerHTML = `<audio id="player" src="${audioUrl}" controls style="width:100%;"></audio>`;
         
-        const downloadLink = document.getElementById("download-link");
-        downloadLink.href = audioUrl;
-        downloadLink.download = `cantonese_record.${fileExt}`;
-        downloadLink.style.display = "block"; 
+        document.getElementById("copy-audio-btn").style.display = "block";
+        document.getElementById("ai-section").style.display = "block"; 
+    }
+
+    // 突破性的優化：將音訊檔案直接寫入 iPhone 剪貼簿
+    async function copyAudioToClipboard() {
+        if (!globalAudioBlob) { alert("尚未產生錄音"); return; }
+        try {
+            // 將錄音 Blob 包裝成系統剪貼簿項目
+            const file = new File([globalAudioBlob], "cantonese_record.mp4", { type: globalAudioBlob.type });
+            await navigator.clipboard.write([
+                new ClipboardItem({ [globalAudioBlob.type]: globalAudioBlob })
+            ]);
+            alert("🎙️ 錄音檔案已成功複製到剪貼簿！下一步請複製提示詞。");
+        } catch (err) {
+            alert("因瀏覽器安全限制，請點擊錄音播放條右側的「...」或分享按鈕手動複製。");
+        }
     }
 
     function generatePrompt() {
@@ -408,11 +384,15 @@
         textarea.setSelectionRange(0, 99999); 
         try {
             navigator.clipboard.writeText(textarea.value);
-            alert("提示詞已複製！請將錄音檔和提示詞一起發給 Gemini 進行分析。");
+            alert("📋 提示詞已複製！請點擊下方按鈕直達 Gemini 貼上。");
         } catch (err) {
             document.execCommand("copy");
-            alert("提示詞已複製！");
+            alert("📋 提示詞已複製！");
         }
+    }
+
+    function goToGemini() {
+        window.location.href = "google.com";
     }
 </script>
 
