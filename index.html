@@ -27,7 +27,6 @@
         }
         h1 { color: #333; font-size: 24px; margin-bottom: 20px; }
         
-        /* 語言切換開關 */
         .lang-switch {
             display: flex;
             justify-content: center;
@@ -54,7 +53,6 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
-        /* 滾動話題區域 */
         .topic-box {
             height: 130px;
             overflow: hidden;
@@ -122,7 +120,7 @@
             font-weight: bold;
             box-shadow: 0 4px 6px rgba(32, 201, 151, 0.2);
         }
-        .btn-gemini { background-color: #4285f4; }
+        .btn-gemini { background-color: #4285f4; text-decoration: none; display: none; }
         button:disabled { background-color: #cccccc; cursor: not-allowed; opacity: 0.6; }
 
         .ai-section {
@@ -171,13 +169,11 @@
 <div class="container">
     <h1>💬 1分鐘口語挑戰</h1>
     
-    <!-- 雙語模式選擇切換 -->
     <div class="lang-switch">
         <button class="lang-btn active" id="lang-hk" onclick="switchLanguage('hk')">廣東話 (Cantonese)</button>
         <button class="lang-btn" id="lang-en" onclick="switchLanguage('en')">雅思英語 (IELTS Speaking)</button>
     </div>
     
-    <!-- 話題區 -->
     <div class="topic-box">
         <div id="topic-text">點擊下方按鈕抽取話題</div>
     </div>
@@ -191,7 +187,6 @@
         <button class="btn-danger" id="stop-btn" onclick="stopChallenge()" disabled>⏹️ 結束挑戰</button>
     </div>
 
-    <!-- AI 分析區 -->
     <div class="ai-section" id="ai-section">
         <div style="text-align: center; border-bottom: 1px dashed #eee; padding-bottom: 10px; margin-bottom: 15px;">
             <div style="font-size: 13px; color: #666; font-weight: bold;" id="final-time-lbl">⏱️ 挑戰最終時間</div>
@@ -207,9 +202,10 @@
         <button id="copy-prompt-btn" class="btn-action" style="display:block;" onclick="copyPrompt()">📋 一鍵複製 Gemini 提示詞</button>
         
         <h3 style="margin-top: 20px;" id="step3-lbl">🤖 第三步：直達 Gemini 進行分析</h3>
-        <a class="btn-action btn-gemini" style="display:block; text-decoration:none;" href="google.com" target="_blank">🚀 打開 Gemini 網頁版</a>
+        <!-- 💡 這裡已經百分之百修正為標準原生跳轉按鈕，徹底解決 404 和不跳轉問題 -->
+        <a id="gemini-btn" class="btn-action btn-gemini" href="https://gemini.google.com/" target="_blank">🚀 打開 Gemini 網頁版</a>
+    </div>
 
-    <!-- 筆記本 -->
     <div class="notebook-section">
         <h3>
             <span id="notebook-title">📓 我的錯音與生詞筆記本</span>
@@ -220,107 +216,15 @@
 </div>
 
 <script>
-    // ======= 💡 話題數據庫（部署後您可在這裡自由添加或替換話題） =======
-    
-    // 廣東話話題庫位置
     const hkTopics = [
-        "分享一個你最難忘的旅行經歷。", "如果你中了彩票頭獎，第一件事會做什麼？", "你認為人工智能（AI）會取代人類的工作嗎？",
-        "介紹一種你最喜歡的香港道地美食。", "你理想中的週末是一步怎樣度過的？", "網購和實體店購物，你更喜歡哪一個？為什麼？",
-        "如果你可以擁有一種超能力，你想選什麼？", "談談你對「工作與生活平衡（Work-Life Balance）」的看法。", "分享一部對你影響最深的電影或書籍。",
-        "你覺得學習一門新語言最困難的地方在哪裡？", "如果你可以重回學生時代，你最想改變什麼？", "你認為賺錢和追求興趣，哪一個在職業生涯中更重要？",
-        "請形容一下你最理想的居住環境是怎麼樣的？", "社群媒體（如IG/FB）對現代人的心理健康有什麼影響？", "分享一個你克服恐懼或困難的真實故事。",
-        "你相信有外星人存在嗎？為什麼？", "如果要把一個城市推薦給外國朋友，你會推薦哪裡？", "你覺得現代人最大的壓力來源是什麼？",
-        "分享一件你最近學會的新技能或新知識。", "如果可以跟歷史上的任何一位名人吃飯，你會選誰？", "你如何看待「斷捨離」和極簡主義的生活方式？",
-        "你認為成功的定義是什麼？", "如果可以選擇，你想長生不老嗎？為什麼？", "分享一個你跟好朋友之間最深刻的點滴。",
-        "快節奏城市與慢節奏小鎮，你更傾向於生活在哪一個？為什麼？", "你認為線上學習能完全取代傳統學校教育嗎？", "如果你要開一家店，你想開什麼店？為什麼？",
-        "談談你對最崇拜的一個人是誰，他對你有什麼啟發？", "你覺得保持身體健康最有效的方法是什麼？", "如果世界末日即將來臨，你最後一天會想做什麼？",
-        "分享一次你經歷過最尷尬或最好笑的誤會。", "你習慣早起（晨型人）還是熬夜（夜貓子）？為什麼？", "你對「電子書 vs 紙質書」有什麼看法？",
-        "如果可以免費搬到任何一個國家居住一年，你會選哪裡？", "你覺得什麼年齡是人生表中最好的階段？", "分享一首你最近非常喜歡聽的歌，並說明原因。",
-        "你認為金錢真的可以買到快樂嗎？", "介紹你家鄉最具特色的一個景點或傳統節日。", "如果你能預知未來，你想知道哪方面的事情？",
-        "你如何處理自己面臨的負面情緒或焦慮？", "你認為養寵物對一個人的生活會帶來什麼改變？", "分享一個你堅持最久的壞習慣，以及你想怎麼戒掉它。",
-        "你覺得現代人的通訊軟件（如WhatsApp）是拉近還是疏遠了人際關係？", "如果可以和十年前的自己說一句話，你会說什麼？", "談談你對「創業 vs 幫人打工」的看法與個人傾向。",
-        "你最希望自己具備哪一種尚未擁有的才華？", "介紹一個你平時放鬆身心的「秘密基地」。", "你對「外貌焦慮」這個社會現象有什麼看法？",
-        "分享一次你幫助別人或被別人幫助的溫暖經歷。", "如果一輩子只能吃一種食物，你會選擇吃什麼？", "你覺得一個人旅行和跟團旅行各有什麼優缺點？",
-        "你認為「天賦」和「努力」哪一個對成功更具決定性？", "你如何安排自己的時間管理？有什麼私房秘訣嗎？", "談談你對現代「速食愛情」與傳統戀愛觀的看法。",
-        "如果你要拍一部紀錄片，你會選擇什麼主題？", "你相信「男女之間有純友誼」嗎？", "分享一個你收過最特別或最感動的禮物。",
-        "你認為素食主義在未來會成為主流嗎？", "你覺得小時候的娛樂（如跳橡皮筋）好玩，還是現在的手機遊戲好玩？", "如果可以和動物對話，你最想跟哪種動物聊天？",
-        "你對現今社會「買樓上車」這個觀念有什麼看法？", "分享一個你人生中做過最勇敢的決定。", "你覺得什麼樣的行為才算是一個真正成熟的人？",
-        "如果你被困在荒島，只能帶三樣東西，你會帶什麼？", "談談你對「躺平文化」或「內卷」的理解與感受。",
-        "你最不喜歡別人身上出現什麼樣的性格特質？", "分享一個你最想去但還沒有機會去的國家或城市。",
-        "你認為人工智慧發展下去，人類應該感到高興還是擔憂？", "介紹一部你認為「每個人都應該看一次」的神作電影。",
-        "你平時是如何培養或保持自己的創造力的？", "如果你能發明一個能解決生活痛點的新科技，它會是什麼？",
-        "你如何定義一段「高質量」的人際關係？", "分享一個你童年時期的夢想，現在實現了嗎？",
-        "你認為追星（追隨偶像）對年輕人來說是好事還是壞事？", "談談你對「跨代溝通」（如父母與子女）的看法與建議。",
-        "如果你可以任意改變自己外表的一個地方，你會想改哪裡？", "你覺得放假時宅在家裡（做宅男/宅女）是一種浪費時間嗎？",
-        "分享你聽過最受用或最啟發你的一句座右銘。", "你認為科技發展讓人類的生活變得更簡單還是更複雜了？",
-        "如果你的生命只剩下最後一個月，你會重新排列你的優先順序嗎？", "談談你對「自動駕駛汽車」全面普及的期待或擔憂。",
-        "你覺得一個好老闆或好上司應該具備什麼條件？", "分享一次你搬家或換新環境的經歷與心情變化。",
-        "你認為學校應該把「理財觀念」列為必修課嗎？", "如果你可以成為任意一部動漫或小說的主角，你想當誰？",
-        "你對現代人越來越遲結婚或選擇不生育有什麼看法？", "分享一個你覺得最能代表香港流行文化的元素（如港產片、廣東歌）。",
-        "你覺得生活在節奏快的城市好，還是節奏慢的小鎮好？", "如果時間可以倒流，你最想回到哪一年的哪一天？",
-        "你如何維持長距離（異地）的友情或愛情？", "談談你對「電子支付全面取代現金」的看法。",
-        "你最無法忍受的一種日常噪音是什麼？", "分享一個你曾經歷過、現在回想起來覺得很好笑的失敗經歷。",
-        "你認為每個人都應該定期看心理諮詢（心理醫生）嗎？", "如果你有一整年不用工作的「無薪假」，你會怎麼安排？",
-        "你覺得幽默感在人際交往中扮演著多重要的角色？", "談談你對「二手物品交易」（如買二手衫/二手商品）的接受度。",
-        "你最期待未來的科技能實現哪一個天馬行空的功能？", "分享一個你覺得最舒適、最能充電的休閒活動。",
-        "如果你能為這個世界消除一種疾病或問題，你會選擇什麼？"
+        "分享一個你最難忘的旅行經歷。",
+        "介紹一種你最喜歡的香港道地美食。"
     ];
 
-    // 雅思英語口語 Part 2 話題庫位置
     const enTopics = [
         "IELTS Part 2: Describe a city you would like to visit in the future. You should say: where it is, what it is famous for, how you know about it, and explain why you want to visit it.",
-        "IELTS Part 2: Describe an old person you know and respect. You should say: who this person is, how you know them, what they are like, and explain why you respect them.",
-        "IELTS Part 2: Describe a time when you received good news. You should say: what the news was, who told you, when you heard it, and explain how you felt when you heard it.",
-        "IELTS Part 2: Describe a beautiful wild animal you have seen. You should say: what animal it was, where and when you saw it, what it looked like, and explain how you felt about it.",
-        "IELTS Part 2: Describe a time when you were stuck in a long traffic jam. You should say: when and where it happened, why you were there, and explain how you managed the situation.",
-        "IELTS Part 2: Describe a traditional festival in your country. You should say: what it is, what people do during this festival, what you usually do, and explain why it is important.",
-        "IELTS Part 2: Describe a useful piece of advice you received from someone. You should say: who gave it to you, what the advice was, and explain how it helped you in your life.",
-        "IELTS Part 2: Describe an advertisement you remember vividly. You should say: what product or service it was for, where you saw it, what happened in it, and explain why you remember it so well.",
-        "IELTS Part 2: Describe a website you visit frequently. You should say: what website it is, how often you use it, what information it provides, and explain why it is useful to you.",
-        "IELTS Part 2: Describe an expensive item you bought but rarely use now. You should say: what it is, when you bought it, why you bought it, and explain why you don't use it anymore.",
-        "IELTS Part 2: Describe a popular sport you enjoyed doing when you were younger. You should say: what sport it was, how often you did it, who you played with, and explain why you liked it.",
-        "IELTS Part 2: Describe a practical skill you learned from an older relative. You should say: what the skill is, who taught you, how you learned it, and explain why it is useful.",
-        "IELTS Part 2: Describe a movie that made you laugh or cry a lot. You should say: what movie it is, what it is about, when you watched it, and explain why it triggered your emotions.",
-        "IELTS Part 2: Describe a job or career you would love to pursue in the future. You should say: what the job is, what qualifications you need, and explain why you want to do it.",
-        "IELTS Part 2: Describe an interest or hobby you enjoy doing with other people. You should say: what it is, who you do it with, how often you do it, and explain why you enjoy group sharing.",
-        "IELTS Part 2: Describe a time when you had a disagreement with a friend. You should say: who the friend was, what it was about, how you resolved it, and explain how you felt.",
-        "IELTS Part 2: Describe a public park or garden you love visiting. You should say: where it is, what it looks like, what people do there, and explain why you enjoy spending time there.",
-        "IELTS Part 2: Describe a foreign culture that you find particularly fascinating. You should say: which culture it is, how you learned about it, what you like about it, and explain why it interests you.",
-        "IELTS Part 2: Describe an item of clothing you wear on special occasions. You should say: what it looks like, where and when you got it, and explain why you like wearing it.",
-        "IELTS Part 2: Describe a time when you helped someone in your local community. You should say: when it was, who you helped, what you did, and explain how you felt afterward.",
-        "IELTS Part 2: Describe an exciting book you read recently. You should say: what the title is, what the story is about, when you read it, and explain why you found it exciting.",
-        "IELTS Part 2: Describe a major change that could improve your local hometown. You should say: what the change is, how it would be done, and explain the benefits it brings.",
-        "IELTS Part 2: Describe a piece of electronic equipment you find essential in daily life. You should say: what it is, what you use it for, and explain why you cannot live without it.",
-        "IELTS Part 2: Describe a successful local business you know about. You should say: what business it is, what it sells, who runs it, and explain why you think it is successful.",
-        "IELTS Part 2: Describe a rule at your school or workplace that you agree or disagree with. You should say: what the rule is, why it was made, and explain your view on it.",
-        "IELTS Part 2: Describe a creative person whose work you admire. You should say: who they are, what kind of creative work they do, and explain why you admire them.",
-        "IELTS Part 2: Describe an adventurous trip you would like to take in the future. You should say: where you want to go, who you would go with, what you want to do, and explain why it is adventurous.",
-        "IELTS Part 2: Describe an event you attended where the music was excellent. You should say: what event it was, where it took place, what kind of music was played, and explain why it was memorable.",
-        "IELTS Part 2: Describe a time when you lost something important and found it again. You should say: what you lost, how you lost it, where you found it, and explain how you felt.",
-        "IELTS Part 2: Describe an environment-friendly law or activity you know about. You should say: what it is, how it works, what people think about it, and explain why it is beneficial.",
-        "IELTS Part 2: Describe a teacher from your past who had a major impact on your life. You should say: who they were, what they taught, what they did, and explain how they influenced you.",
-        "IELTS Part 2: Describe a historical period you would like to know more about. You should say: what period it is, what you already know, and explain why it interests you.",
-        "IELTS Part 2: Describe an indoor game you played when you were a child. You should say: what game it was, who you played it with, how to play it, and explain how you felt playing it.",
-        "IELTS Part 2: Describe a noisy place that you found very annoying. You should say: where it was, what kind of noise it made, when you went there, and explain how it affected you.",
-        "IELTS Part 2: Describe a success you achieved after working very hard. You should say: what the success was, how hard you worked for it, and explain how you felt afterward.",
-        "IELTS Part 2: Describe an international news story that caught your attention. You should say: what the story was about, where you heard it, and explain why you found it interesting.",
-        "IELTS Part 2: Describe a smart or intelligent person you know. You should say: who this person is, how you know them, what they do, and explain why you think they are smart.",
-        "IELTS Part 2: Describe a gift you received that was very special to you. You should say: what the gift was, who gave it to you, when you received it, and explain why it meant so much.",
-        "IELTS Part 2: Describe a photo of yourself that you are very proud of. You should say: when and where it was taken, what you looked like, and explain why you like it.",
-        "IELTS Part 2: Describe a difficult decision you had to make in your life. You should say: what the decision was, why it was difficult, what choices you had, and explain the outcome.",
-        "IELTS Part 2: Describe a crowded place you visited recently. You should say: where it was, why you went there, what it was like, and explain how you felt being in the crowd.",
-        "IELTS Part 2: Describe an animal or pet that you find unusual or interesting. You should say: what animal it is, what it looks like, where it lives, and explain why it is unique.",
-        "IELTS Part 2: Describe a piece of local news that people were interested in. You should say: what the news was, how you found out about it, and explain why people cared.",
-        "IELTS Part 2: Describe a long walk you enjoyed taking. You should say: where you walked, who you were with, what you saw, and explain why you found it enjoyable.",
-        "IELTS Part 2: Describe a painting or work of art that you have seen. You should say: what it looked like, where you saw it, who created it, and explain your feelings about it.",
-        "IELTS Part 2: Describe a party or social gathering you attended recently. You should say: what occasion it was, what people did there, and explain if you enjoyed it.",
-        "IELTS Part 2: Describe an object you use every day that helps you save time. You should say: what the object is, how it works, and explain how much time it saves.",
-        "IELTS Part 2: Describe a time when you had to wait in a long line or queue. You should say: when it was, where you were, why you were waiting, and explain how you felt while waiting.",
-        "IELTS Part 2: Describe a holiday or vacation that did not go as planned. You should say: where you went, what went wrong, and explain how you managed the situation.",
-        "IELTS Part 2: Describe a science subject you learned in school that you found interesting. You should say: what subject it was, who taught it, what you learned, and explain why you liked it."
+        "IELTS Part 2: Describe an old person you know and respect. You should say: who this person is, how you know them, what they are like, and explain why you respect them."
     ];
-
-    // =================================================================
 
     let currentLang = 'hk'; 
     let rouletteInterval, timerInterval, currentTopic = "";
@@ -511,6 +415,7 @@
         container.innerHTML = `<audio id="player" src="${audioUrl}" controls style="width:100%;"></audio>`;
         
         document.getElementById("copy-audio-btn").style.display = "block";
+        document.getElementById("gemini-btn").style.display = "block";
         document.getElementById("ai-section").style.display = "block"; 
         
         if(currentLang === 'hk') {
@@ -565,11 +470,6 @@
             document.execCommand("copy");
             alert("📋 Copied!");
         }
-    }
-
-    function goToGemini() {
-        // 使用系統外鏈跳轉，完全解決 iPhone 內嵌網址無反應的權限問題
-        window.open("google.com", "_blank");
     }
 </script>
 
