@@ -411,22 +411,25 @@
         globalAudioBlob = new Blob(audioChunks, { type: mimeType });
         const audioUrl = URL.createObjectURL(globalAudioBlob);
         
+        // 核心優化：賦予錄音專屬的標題與ID，強制 iPhone 系統將其識別為可直接分享的媒體文件
         const container = document.getElementById("audio-container");
-        container.innerHTML = `<audio id="player" src="${audioUrl}" controls style="width:100%;"></audio>`;
+        container.innerHTML = `<audio id="player" src="${audioUrl}" title="我的口語練習錄音" controls style="width:100%;"></audio>`;
         
-        document.getElementById("copy-audio-btn").style.display = "block";
+        // 隱藏在 iPhone 上失效的「一鍵複製錄音」按鈕，避免混淆
+        document.getElementById("copy-audio-btn").style.display = "none";
         document.getElementById("gemini-btn").style.display = "block";
         document.getElementById("ai-section").style.display = "block"; 
         
+        // 動態根據當前語言更換提示文字
         if(currentLang === 'hk') {
             document.getElementById('final-time-lbl').innerText = "⏱️ 挑戰最終時間";
-            document.getElementById('step1-lbl').innerText = "🤖 第一步：處理錄音檔案";
+            document.getElementById('step1-lbl').innerText = "🤖 第一步：長按上方播放條 ➔ 分享/發送到 Gemini";
             document.getElementById('step2-lbl').innerText = "🤖 第二步：處理 AI 提示詞";
             document.getElementById('step3-lbl').innerText = "🤖 第三步：直達 Gemini 進行分析";
             document.getElementById('copy-prompt-btn').innerText = "📋 一鍵複製 Gemini 提示詞";
         } else {
             document.getElementById('final-time-lbl').innerText = "⏱️ Final Spoken Time";
-            document.getElementById('step1-lbl').innerText = "🤖 Step 1: Process Audio File";
+            document.getElementById('step1-lbl').innerText = "🤖 Step 1: Long-press audio bar above ➔ Share/Send to Gemini";
             document.getElementById('step2-lbl').innerText = "🤖 Step 2: Process AI Prompt";
             document.getElementById('step3-lbl').innerText = "🤖 Step 3: Go to Gemini for Analysis";
             document.getElementById('copy-prompt-btn').innerText = "📋 One-click Copy Gemini Prompt";
